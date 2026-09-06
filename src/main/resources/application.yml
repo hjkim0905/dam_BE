@@ -1,6 +1,11 @@
 spring:
   application:
     name: dam
+  # 로컬 비밀값은 .env 하나에 둔다. 인텔리제이 실행 설정과 터미널이 같은 파일을
+  # 보게 되어, 한쪽에만 넣어 두고 다른 쪽에서 헤매는 일이 없어진다.
+  # optional 이라 파일이 없는 곳(CI, 운영)에서는 그냥 환경변수를 쓴다.
+  config:
+    import: optional:file:.env[.properties]
   profiles:
     default: local
   datasource:
@@ -43,12 +48,12 @@ dam:
     private-key: ${APPLE_PRIVATE_KEY:}
   storage:
     bucket: ${STORAGE_BUCKET:dam}
-    region: ${STORAGE_REGION:ap-chuncheon-1}
+    region: ${STORAGE_REGION:ap-tokyo-1}
     endpoint: ${STORAGE_ENDPOINT:}
     access-key: ${STORAGE_ACCESS_KEY:}
     secret-key: ${STORAGE_SECRET_KEY:}
     upload-ttl: 5m
-    read-ttl: 15m
+    read-ttl: 6d
     max-bytes: 10485760
 
 ---

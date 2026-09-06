@@ -4,6 +4,9 @@ import app.dam.config.DamProperties;
 import app.dam.error.ApiException;
 import app.dam.error.ErrorCode;
 import java.net.URI;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -38,6 +41,18 @@ public class PhotoStorage {
     private volatile S3Presigner presigner;
     private volatile S3Client client;
 
+    /**
+     * 같은 사진에 매번 새로 서명하면 주소가 매번 달라진다. 브라우저는 주소로 캐시를
+     * 찾으므로, 달력을 다시 열 때마다 같은 사진을 처음 보는 것처럼 통째로 내려받는다.
+     * 그래서 서명을 재사용한다. 남은 수명이 절반 밑으로 떨어지면 그때 새로 만든다.
+     */
+    private final Map<String, Signed> signedReads = new ConcurrentHashMap<>();
+
+    private record Signed(String url, Instant reuseUntil) {}
+
+    // 사진 하나에 한 칸이라 한 해를 써도 수백 개다. 그래도 끝없이 늘지는 않게 막는다.
+    private static final int MAX_SIGNED = 10_000;
+
     PhotoStorage(DamProperties properties) {
         this.storage = properties.storage();
     }
@@ -54,16 +69,24 @@ public class PhotoStorage {
                 .build()).url().toString();
     }
 
-    /** 매번 새로 서명한다. 유효기간이 짧아야 주소가 새어도 오래 안 간다. */
     public String readUrl(String key) {
+        Signed cached = signedReads.get(key);
+        if (cached != null && Instant.now().isBefore(cached.reuseUntil())) return cached.url();
+
         var get = GetObjectRequest.builder().bucket(storage.bucket()).key(key).build();
-        return presigner().presignGetObject(GetObjectPresignRequest.builder()
+        String url = presigner().presignGetObject(GetObjectPresignRequest.builder()
                 .signatureDuration(storage.readTtl())
                 .getObjectRequest(get)
                 .build()).url().toString();
+
+        if (signedReads.size() >= MAX_SIGNED) signedReads.clear();
+        // 수명의 절반까지만 돌려쓴다. 손에 쥔 주소는 언제 받았든 절반 이상 남아 있다.
+        signedReads.put(key, new Signed(url, Instant.now().plus(storage.readTtl().dividedBy(2))));
+        return url;
     }
 
     public void delete(String key) {
+        signedReads.remove(key);
         try {
             client().deleteObject(DeleteObjectRequest.builder()
                     .bucket(storage.bucket()).key(key).build());
