@@ -1,10 +1,12 @@
 package app.dam.room;
 
+import app.dam.entry.EntryRepository;
 import app.dam.error.ApiException;
 import app.dam.error.ErrorCode;
 import app.dam.user.User;
 import app.dam.user.UserRepository;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,13 +26,15 @@ public class RoomService {
     private final MembershipRepository memberships;
     private final InviteRepository invites;
     private final UserRepository users;
+    private final EntryRepository entries;
 
     RoomService(RoomRepository rooms, MembershipRepository memberships,
-                InviteRepository invites, UserRepository users) {
+                InviteRepository invites, UserRepository users, EntryRepository entries) {
         this.rooms = rooms;
         this.memberships = memberships;
         this.invites = invites;
         this.users = users;
+        this.entries = entries;
     }
 
     public Optional<Membership> currentMembership(Long userId) {
@@ -81,9 +85,7 @@ public class RoomService {
 
     @Transactional
     public RoomDto.Joined join(Long userId, String rawCode) {
-        if (currentMembership(userId).isPresent()) {
-            throw ApiException.of(ErrorCode.ALREADY_IN_ROOM);
-        }
+        leaveEmptyRoom(userId);
 
         String code = InviteCodes.normalize(rawCode);
         if (!InviteCodes.looksValid(code)) {
@@ -119,11 +121,37 @@ public class RoomService {
                 .orElseGet(() -> memberships.save(
                         Membership.join(invite.getRoomId(), userId)));
 
+        // 맺은 날 당일 것은 양쪽 모두 방으로 들인다. 한쪽만 들이면 같은 날인데
+        // 내 것만 보이고 상대 것은 안 보이는 상태가 된다.
+        entries.adoptInto(
+                invite.getRoomId(), currentMemberIds(invite.getRoomId()), LocalDate.now());
+
         User partner = partnerOf(invite.getRoomId(), userId).orElse(null);
         return new RoomDto.Joined(
                 invite.getRoomId(),
                 partner == null ? null : new RoomDto.Partner(partner.getId(), partner.getName()),
                 membership.getJoinedAt().toLocalDate());
+    }
+
+    /**
+     * 초대코드를 만들면 방이 먼저 생긴다. 그래서 둘이 각자 코드를 만들어 두면
+     * 서로의 코드를 쓸 수 없는 막다른 길이 된다. 혼자 있는 방이면 비켜 준다.
+     *
+     * 남겨 둔 내 코드도 같이 없앤다. 안 그러면 그 코드로 들어온 사람이 아무도
+     * 없는 방에 혼자 서게 된다.
+     */
+    private void leaveEmptyRoom(Long userId) {
+        Membership mine = currentMembership(userId).orElse(null);
+        if (mine == null) {
+            return;
+        }
+        if (memberships.findByRoomIdAndLeftAtIsNull(mine.getRoomId()).size() > 1) {
+            throw ApiException.of(ErrorCode.ALREADY_IN_ROOM);
+        }
+
+        invites.deleteAll(invites.findByRoomIdAndUsedAtIsNull(mine.getRoomId()));
+        mine.leave();
+        memberships.flush();
     }
 
     /**

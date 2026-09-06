@@ -19,6 +19,8 @@ public interface InviteRepository extends JpaRepository<Invite, Long> {
 
     List<Invite> findByCreatedByOrUsedBy(Long createdBy, Long usedBy);
 
+    List<Invite> findByRoomIdAndUsedAtIsNull(Long roomId);
+
     /**
      * 조회하고 나서 찍으면 둘이 동시에 넣었을 때 둘 다 통과한다. 조건을 갱신문 안에
      * 넣고 바뀐 행이 하나일 때만 진행한다.
