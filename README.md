@@ -15,9 +15,11 @@ mysql -u root -p -e "CREATE DATABASE dam DEFAULT CHARACTER SET utf8mb4 COLLATE u
 접속 정보를 넣고 띄운다.
 
 ```sh
-cp .env.example .env
-DB_PASSWORD=... ./gradlew bootRun
+cp .env.example .env      # 값을 채운 뒤
+set -a; source .env; set +a; ./gradlew bootRun
 ```
+
+`APPLE_PRIVATE_KEY` 는 .p8 의 내용이다. 머리말이 있든 없든, 줄바꿈이 어떻게 들어오든 읽는다.
 
 ```sh
 ./gradlew test
