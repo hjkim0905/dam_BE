@@ -2,9 +2,13 @@ package app.dam.entry;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface EntryRepository extends JpaRepository<Entry, Long> {
 
@@ -26,4 +30,22 @@ public interface EntryRepository extends JpaRepository<Entry, Long> {
     long countByUserId(Long userId);
 
     Optional<Entry> findFirstByUserIdOrderByEntryDateAsc(Long userId);
+
+    /**
+     * 맺은 날 당일에 이미 혼자 담아둔 것을 방으로 들인다. 담는 순간의 방을 박는
+     * 방식이라, 아침에 담고 저녁에 맺으면 같은 날인데도 서로 안 보인다.
+     *
+     * 그전에 혼자 담던 것은 건드리지 않는다. 다른 방에 속한 것도 그대로 둔다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update Entry e
+               set e.roomId = :roomId
+             where e.userId in :userIds
+               and e.entryDate = :on
+               and e.roomId is null
+            """)
+    int adoptInto(@Param("roomId") Long roomId,
+                  @Param("userIds") Collection<Long> userIds,
+                  @Param("on") LocalDate on);
 }
