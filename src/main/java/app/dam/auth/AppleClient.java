@@ -156,10 +156,11 @@ public class AppleClient {
 
     private ECPrivateKey privateKey() {
         try {
+            // 머리말을 떼고 base64 가 아닌 글자를 모두 버린다. 줄바꿈이 진짜 개행이든
+            // 문자 그대로의 \n 이든, 환경변수에 어떻게 들어와도 같은 값이 된다.
             String pem = apple.privateKey()
-                    .replace("-----BEGIN PRIVATE KEY-----", "")
-                    .replace("-----END PRIVATE KEY-----", "")
-                    .replaceAll("\\s", "");
+                    .replaceAll("-----[A-Z ]+-----", "")
+                    .replaceAll("[^A-Za-z0-9+/=]", "");
             var spec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(pem));
             return (ECPrivateKey) KeyFactory.getInstance("EC").generatePrivate(spec);
         } catch (Exception e) {
