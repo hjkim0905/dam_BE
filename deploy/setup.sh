@@ -25,6 +25,12 @@ echo "▶ 4/6  Caddy. 도메인만 적으면 인증서를 받아 갱신까지 �
 sudo dnf install -y 'dnf-command(copr)'
 sudo dnf copr enable -y @caddy/caddy
 sudo dnf install -y caddy
+# 로그는 파일이 아니라 journald 로 보낸다. caddy 유닛이 ProtectSystem=full 이라
+# /var 가 읽기 전용이고, 파일로 쓰려면 예외를 뚫어야 한다. 로그 시스템이 하나면
+# 회전 설정도 journald 것 하나로 끝난다.
+#
+# 웹은 정적 파일이 아니다. next/image 가 사진을 줄이려면 Node 서버가 떠 있어야 해서
+# 3000 번으로 넘긴다.
 sudo tee /etc/caddy/Caddyfile >/dev/null <<CADDY
 $DOMAIN {
 	# 웹과 API 가 같은 오리진이라 CORS 가 통째로 사라진다.
@@ -32,17 +38,25 @@ $DOMAIN {
 		reverse_proxy localhost:8080
 	}
 	handle {
-		root * /srv/dam-web
-		try_files {path} {path}/ /index.html
-		file_server
+		reverse_proxy localhost:3000
 	}
 }
 CADDY
+sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl enable --now caddy
 
 echo "▶ 5/6  서비스 등록"
 sudo useradd -r -s /sbin/nologin dam 2>/dev/null || true
 sudo mkdir -p /srv/dam /srv/dam-web && sudo chown -R dam:dam /srv/dam
+
+# 비밀값은 이 파일 하나에 둔다. 서비스 파일에 박으면 systemctl cat 으로 다 보인다.
+sudo tee /srv/dam/.env >/dev/null <<ENV
+DB_URL=jdbc:mysql://localhost:3306/dam
+DB_USERNAME=dam
+DB_PASSWORD=${DB_PASSWORD}
+ENV
+sudo chown dam:dam /srv/dam/.env
+sudo chmod 600 /srv/dam/.env
 sudo tee /etc/systemd/system/dam.service >/dev/null <<'UNIT'
 [Unit]
 Description=dam
@@ -67,17 +81,8 @@ sudo systemctl daemon-reload
 echo "▶ 6/7  로그가 디스크를 채우지 않게"
 # 부트 볼륨이 47GB 뿐이라, 접근 로그가 몇 해 쌓이면 서버가 멈춘다. 지우는 것이
 # 아니라 오래된 것부터 버리는 것이라, 최근 것은 늘 남아 있다.
-sudo tee /etc/logrotate.d/dam >/dev/null <<'ROTATE'
-/var/log/caddy/*.log {
-	weekly
-	rotate 4
-	compress
-	missingok
-	notifempty
-	copytruncate
-}
-ROTATE
-# systemd 저널도 상한을 둔다. 기본값은 디스크의 10% 까지 쓴다.
+# Caddy 와 스프링이 둘 다 journald 로 보내므로 여기 상한 하나면 끝난다.
+# 기본값은 디스크의 10% 까지 쓰는데, 부트 볼륨이 47GB 뿐이라 묶어 둔다.
 sudo mkdir -p /etc/systemd/journald.conf.d
 sudo tee /etc/systemd/journald.conf.d/dam.conf >/dev/null <<'JOURNAL'
 [Journal]
