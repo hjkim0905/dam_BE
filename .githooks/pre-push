@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# 브랜치 이름 규칙을 강제하고 main 직접 push를 막는다 (GitHub Flow).
+# 설치: git config core.hooksPath .githooks
+set -uo pipefail
+
+types="feat|fix|docs|style|refactor|test|chore|perf|ci"
+
+while read -r local_ref _ remote_ref _; do
+  # 브랜치 삭제(로컬 ref가 비어 있음)는 검사하지 않는다.
+  [ "$local_ref" = "(delete)" ] && continue
+
+  branch=${remote_ref#refs/heads/}
+
+  if [ "$branch" = "main" ]; then
+    cat >&2 <<'EOF'
+
+[push 거부] main 에 직접 push 할 수 없다.
+
+  GitHub Flow: 브랜치에서 작업하고 PR로 머지한다.
+
+    git switch -c feat/my-feature
+    git push -u origin feat/my-feature
+    gh pr create
+
+EOF
+    exit 1
+  fi
+
+  printf '%s' "$branch" | grep -qE "^($types)/[a-z0-9]+(-[a-z0-9]+)*$" && continue
+
+  printf '\n[push 거부] 브랜치 이름이 규칙에 맞지 않는다: %s\n\n' "$branch" >&2
+  cat >&2 <<EOF
+  형식: <type>/<kebab-case>
+
+  type  $types
+
+  예시:
+    feat/apple-login
+    fix/entry-visibility
+    chore/ci-setup
+
+  이름 변경: git branch -m <새 이름>
+
+EOF
+  exit 1
+done
+
+exit 0

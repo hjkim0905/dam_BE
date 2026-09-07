@@ -1,0 +1,71 @@
+name: CI
+
+# GitHub Flow: 검증은 PR에서 하고, 머지된 main을 한 번 더 확인한다.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # 마이그레이션과 ddl-auto=validate 는 진짜 MySQL 이 있어야 검사된다.
+    services:
+      mysql:
+        image: mysql:9
+        env:
+          MYSQL_ROOT_PASSWORD: ci
+          MYSQL_DATABASE: dam
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - run: ./gradlew build
+
+      # 서버가 실제로 뜨는지까지 본다. 컴파일과 단위 테스트만으로는
+      # 마이그레이션이 깨졌는지, 엔티티가 테이블과 어긋나는지 알 수 없다.
+      - name: 기동 확인
+        env:
+          DB_URL: jdbc:mysql://127.0.0.1:3306/dam
+          DB_USERNAME: root
+          DB_PASSWORD: ci
+        run: |
+          ./gradlew bootRun > boot.log 2>&1 &
+          for _ in $(seq 1 60); do
+            sleep 2
+            curl -sf http://localhost:8080/api/v1/actuator/health && exit 0
+          done
+          echo "서버가 뜨지 않았다"; cat boot.log; exit 1
+
+  commit-convention:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 브랜치 이름 검사
+        run: |
+          branch='${{ github.head_ref }}'
+          echo "$branch" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf|ci)/[a-z0-9]+(-[a-z0-9]+)*$' \
+            || { echo "브랜치 이름이 <type>/<kebab-case> 형식이 아니다: $branch"; exit 1; }
+      - name: 커밋 메시지 검사
+        run: |
+          git log --format=%s origin/${{ github.base_ref }}..HEAD | while read -r subject; do
+            printf '%s' "$subject" > /tmp/msg
+            bash .githooks/commit-msg /tmp/msg || exit 1
+          done
