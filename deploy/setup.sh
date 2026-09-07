@@ -9,10 +9,9 @@ echo "▶ 1/6  방화벽. 바깥을 보는 것은 Caddy 뿐이라 8080 은 열�
 sudo firewall-cmd --permanent --add-service=http
 sudo firewall-cmd --permanent --add-service=https
 sudo firewall-cmd --reload
-# OCI 이미지는 firewalld 와 별개로 iptables 규칙을 들고 있어서 이쪽도 열어야 한다.
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-sudo netfilter-persistent save 2>/dev/null || sudo service iptables save
+# 예전 OCI 이미지는 firewalld 와 별개로 iptables 규칙을 들고 있었다. Oracle Linux 9.8
+# 에서는 INPUT 체인이 비어 있고 정책이 ACCEPT 라, 여기서 firewalld 만 열면 된다.
+sudo firewall-cmd --list-services
 
 echo "▶ 2/6  자바 21"
 sudo dnf install -y java-21-openjdk-headless

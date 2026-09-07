@@ -42,11 +42,14 @@ class PhotoStorageTest {
 
     @Test
     void 수명이_다하면_다시_서명한다() throws InterruptedException {
-        // 돌려쓰는 창은 수명의 절반이라 1초짜리면 0.5초다. 그 뒤엔 새 서명이 나와야 한다.
-        var photos = storage(Duration.ofSeconds(1));
+        // 돌려쓰는 창은 수명의 절반이라 2초짜리면 1초다.
+        var photos = storage(Duration.ofSeconds(2));
         String first = photos.readUrl("u1/2026/08/a.jpg");
 
-        Thread.sleep(600);
+        // 1.1초를 자면 두 가지가 같이 보장된다. 창이 지났고, 초가 넘어갔다.
+        // 서명에는 초 단위 시각이 들어가서, 창만 지나고 같은 초에 서명하면
+        // 글자까지 똑같은 주소가 나온다. 그래서 600ms 로는 이따금 실패했다.
+        Thread.sleep(1100);
 
         assertThat(photos.readUrl("u1/2026/08/a.jpg")).isNotEqualTo(first);
     }
