@@ -25,12 +25,18 @@ jobs:
 
       - run: ./gradlew bootJar
 
+      # 키를 base64 로 넣어 둔다. 그냥 넣으면 시크릿 저장소가 마지막 줄바꿈을
+      # 떼어내는데, OpenSSH 는 그것이 없으면 "error in libcrypto" 로 거부한다.
       - name: SSH 준비
+        env:
+          DEPLOY_KEY_B64: ${{ secrets.DEPLOY_KEY_B64 }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s' '${{ secrets.DEPLOY_KEY }}' > ~/.ssh/deploy
+          printf '%s' "$DEPLOY_KEY_B64" | base64 -d > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
-          ssh-keyscan -H '${{ secrets.DEPLOY_HOST }}' >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keygen -y -f ~/.ssh/deploy > /dev/null
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: 올리기
         run: |
