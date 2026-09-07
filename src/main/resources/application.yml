@@ -37,6 +37,10 @@ management:
         include: health
 
 dam:
+  client:
+    # 이 버전보다 낮은 앱은 받지 않는다. 앱을 새로 내지 않고 이 값만 올리면 강제된다.
+    min-version: ${MIN_APP_VERSION:1.0.0}
+
   session:
     # 로컬 기본값은 개발 편의용이다. 운영에서는 반드시 환경변수로 덮는다.
     secret: ${SESSION_SECRET:dam-local-development-secret-key-please-override-me}

@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "다시 로그인해 주세요"),
+    UPDATE_REQUIRED(HttpStatus.UPGRADE_REQUIRED, "앱을 업데이트해 주세요"),
     ONBOARDING_REQUIRED(HttpStatus.FORBIDDEN, "온보딩을 먼저 마쳐 주세요"),
     CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "약관에 동의해야 시작할 수 있어요"),
     NOT_MY_ENTRY(HttpStatus.FORBIDDEN, "내가 담은 것만 지울 수 있어요"),

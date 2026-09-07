@@ -2,6 +2,7 @@ package app.dam.config;
 
 import app.dam.error.ErrorCode;
 import app.dam.security.ApiErrorWriter;
+import app.dam.security.AppVersionFilter;
 import app.dam.security.OnboardingFilter;
 import app.dam.security.SessionAuthenticationFilter;
 import app.dam.user.UserRepository;
@@ -15,6 +16,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -33,10 +35,12 @@ public class SecurityConfig {
                                     JwtDecoder sessionTokenDecoder,
                                     UserRepository users,
                                     ApiErrorWriter errors,
+                                    DamProperties properties,
                                     @Qualifier("corsConfigurationSource")
                                     CorsConfigurationSource cors) throws Exception {
         var session = new SessionAuthenticationFilter(sessionTokenDecoder, users);
         var onboarding = new OnboardingFilter(errors);
+        var version = new AppVersionFilter(properties.client().minVersion(), errors);
 
         return http
                 // 토큰으로만 인증한다. 쿠키를 안 쓰니 CSRF 로 태울 자격증명 자체가 없다.
@@ -49,6 +53,10 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((request, response, ex) ->
                                 errors.write(response, ErrorCode.UNAUTHENTICATED)))
+                // 버전은 인증보다 먼저 본다. 낡은 앱은 로그인 여부와 상관없이 막아야 한다.
+                // 기준점은 표준 필터라야 한다. 우리가 만든 필터를 가리키면
+                // "등록된 순서가 없다"며 뜨지 않는다.
+                .addFilterBefore(version, SecurityContextHolderFilter.class)
                 .addFilterBefore(session, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(onboarding, SessionAuthenticationFilter.class)
                 .build();

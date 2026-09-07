@@ -36,6 +36,7 @@ class AppleClientTest {
         return new AppleClient(new DamProperties(
                 new DamProperties.Session("secret", Duration.ofDays(30)),
                 new DamProperties.Apple(BUNDLE_ID, TEAM_ID, KEY_ID, privateKey),
+                null,
                 null));
     }
 
