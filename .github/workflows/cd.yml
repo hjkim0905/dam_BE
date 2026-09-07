@@ -1,0 +1,53 @@
+name: CD
+
+# main 에 올라간 것만 배포한다. CI 가 PR 에서 이미 봤으므로 여기서 다시 보지 않는다.
+on:
+  push:
+    branches: [main]
+
+# 배포가 겹치면 뒤엣것이 앞엣것의 jar 를 덮는다. 줄을 세우되 취소하지는 않는다.
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - run: ./gradlew bootJar
+
+      - name: SSH 준비
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' '${{ secrets.DEPLOY_KEY }}' > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          ssh-keyscan -H '${{ secrets.DEPLOY_HOST }}' >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 올리기
+        run: |
+          scp -i ~/.ssh/deploy build/libs/dam.jar "$TARGET:/tmp/dam-new.jar"
+          scp -i ~/.ssh/deploy deploy/release.sh "$TARGET:/tmp/release.sh"
+
+      - name: 바꿔 끼우고 확인
+        run: ssh -i ~/.ssh/deploy "$TARGET" "bash /tmp/release.sh ${{ github.sha }}"
+
+      # 실패하면 되돌아가지만, 그 사실을 아무도 모르면 낡은 버전이 계속 돈다.
+      - name: 실패를 알린다
+        if: failure()
+        env:
+          HOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$HOOK" ] || exit 0
+          jq -n --arg c "담 배포가 실패해서 이전 버전으로 되돌렸습니다.
+          $RUN_URL" '{content: $c}' \
+            | curl -sS -X POST "$HOOK" -H 'Content-Type: application/json' -d @-

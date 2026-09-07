@@ -17,7 +17,7 @@ jobs:
     # 마이그레이션과 ddl-auto=validate 는 진짜 MySQL 이 있어야 검사된다.
     services:
       mysql:
-        image: mysql:9
+        image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: ci
           MYSQL_DATABASE: dam

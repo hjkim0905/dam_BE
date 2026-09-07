@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DSN·환경·릴리스는 SENTRY_DSN, SENTRY_ENVIRONMENT, SENTRY_RELEASE 환경변수에서
+  SDK 가 직접 읽는다. DSN 이 없으면 아무것도 보내지 않으므로 로컬과 CI 는 설정이 없다.
+-->
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+  <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+  <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+    <!-- ApiExceptionHandler 가 예상한 4xx 는 log.debug 로, 예상 못 한 것만
+         log.error 로 남긴다. 그 경계가 그대로 보고 기준이 된다. -->
+    <options>
+      <!-- 없을 때 빈 문자열이어야 SDK 가 조용히 꺼진다. 안 주면 기동마다 경고가 뜬다. -->
+      <dsn>${SENTRY_DSN:-}</dsn>
+      <sendDefaultPii>false</sendDefaultPii>
+    </options>
+    <minimumEventLevel>ERROR</minimumEventLevel>
+    <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+    <appender-ref ref="SENTRY"/>
+  </root>
+</configuration>
