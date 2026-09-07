@@ -7,6 +7,7 @@ import app.dam.room.RoomService;
 import app.dam.user.User;
 import app.dam.user.UserRepository;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,8 +37,8 @@ public class EntryService {
      * 않은 방에 기록을 넣을 수 있다.
      */
     @Transactional
-    public EntryDto.Kept keep(Long userId, EntryDto.Keep request) {
-        if (request.date().isAfter(LocalDate.now())) {
+    public EntryDto.Kept keep(Long userId, EntryDto.Keep request, ZoneId zone) {
+        if (request.date().isAfter(LocalDate.now(zone))) {
             throw ApiException.of(ErrorCode.FUTURE_DATE);
         }
 
