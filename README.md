@@ -235,6 +235,4 @@ curl -s -X POST $API/entries -H "Authorization: Bearer $TOKEN" \
 - **스키마는 손으로 고치지 않는다.** `ddl-auto`가 validate라 엔티티와 테이블이 어긋나면 뜨지 않는다. 바꿀 게 있으면 `db/migration`에 다음 번호 파일을 더한다.
 - **회원탈퇴는 행을 진짜로 지운다.** `apple_sub`이 UNIQUE라 탈퇴한 행을 남겨두면 같은 애플 계정으로 다시 가입할 수 없다. 이 문제는 DB 스키마를 직접 검토하다 출시 전에 발견했다.
 
-설계 문서(DB 스키마, ERD, API 명세서)는 노션의 `[BE] Spring Boot 서버 구축` 아래에 있습니다.
-
 <div align="right"><a href="#readme-top">맨 위로</a></div>
