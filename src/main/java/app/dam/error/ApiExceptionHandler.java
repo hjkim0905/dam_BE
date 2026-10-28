@@ -20,6 +20,17 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(e.code().status()).body(ErrorResponse.of(e.code()));
     }
 
+    /**
+     * 둘이 같은 스티커를 거의 동시에 옮기면 버전 비교를 둘 다 통과하고 저장할 때 부딪힌다.
+     * 나중에 저장한 쪽에게 먼저 고친 사람이 있다고 알린다.
+     */
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    ResponseEntity<ErrorResponse> handleConflict(Exception e) {
+        log.debug("동시에 고친 것과 부딪힘", e);
+        return ResponseEntity.status(ErrorCode.DIARY_ITEM_CONFLICT.status())
+                .body(ErrorResponse.of(ErrorCode.DIARY_ITEM_CONFLICT));
+    }
+
     @ExceptionHandler({
             MethodArgumentNotValidException.class,
             MissingServletRequestParameterException.class,

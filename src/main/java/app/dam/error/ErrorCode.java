@@ -24,6 +24,15 @@ public enum ErrorCode {
     APPLE_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "애플 로그인을 확인하지 못했어요"),
     APPLE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "애플 로그인이 아직 준비되지 않았어요"),
     STORAGE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "사진 저장소가 아직 준비되지 않았어요"),
+    DIARY_NOT_FOUND(HttpStatus.NOT_FOUND, "그 책을 찾을 수 없어요"),
+    DIARY_YEAR_INVALID(HttpStatus.BAD_REQUEST, "그 해의 책은 만들 수 없어요"),
+    DIARY_FULL(HttpStatus.CONFLICT, "책에 더 넣을 자리가 없어요"),
+    DIARY_PAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "그 페이지를 찾을 수 없어요"),
+    DIARY_PAGE_FULL(HttpStatus.CONFLICT, "페이지에 더 붙일 자리가 없어요"),
+    DIARY_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "붙인 것을 찾을 수 없어요"),
+    DIARY_ITEM_CONFLICT(HttpStatus.CONFLICT, "그사이 다른 사람이 먼저 고쳤어요"),
+    DIARY_ITEM_INVALID(HttpStatus.BAD_REQUEST, "붙일 수 없는 것이에요"),
+    DIARY_PHOTO_HIDDEN(HttpStatus.FORBIDDEN, "이 책에 붙일 수 없는 사진이에요"),
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청을 이해하지 못했어요");
 
     private final HttpStatus status;

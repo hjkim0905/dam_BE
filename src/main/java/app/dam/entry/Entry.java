@@ -83,6 +83,10 @@ public class Entry {
         return userId;
     }
 
+    public Long getRoomId() {
+        return roomId;
+    }
+
     public LocalDate getEntryDate() {
         return entryDate;
     }

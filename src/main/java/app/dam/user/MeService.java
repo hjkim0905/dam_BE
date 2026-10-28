@@ -1,6 +1,7 @@
 package app.dam.user;
 
 import app.dam.auth.AppleClient;
+import app.dam.diary.DiaryService;
 import app.dam.entry.EntryService;
 import app.dam.error.ApiException;
 import app.dam.error.ErrorCode;
@@ -19,14 +20,16 @@ public class MeService {
     private final RoomService rooms;
     private final AppleClient apple;
     private final PhotoStorage photos;
+    private final DiaryService diaries;
 
     MeService(UserRepository users, EntryService entries, RoomService rooms,
-              AppleClient apple, PhotoStorage photos) {
+              AppleClient apple, PhotoStorage photos, DiaryService diaries) {
         this.users = users;
         this.entries = entries;
         this.rooms = rooms;
         this.apple = apple;
         this.photos = photos;
+        this.diaries = diaries;
     }
 
     /** 마이페이지가 한 번에 그려지도록 통계와 방까지 한 응답에 담는다. */
@@ -75,6 +78,7 @@ public class MeService {
         apple.revoke(user.getAppleRefreshToken());
 
         List<String> photoKeys = entries.removeAllOf(userId);
+        diaries.forget(userId);
         rooms.forget(userId);
         users.delete(user);
         return photoKeys;
