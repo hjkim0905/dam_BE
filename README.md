@@ -15,6 +15,8 @@
 <img src="https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white" alt="MySQL">
 <img src="https://img.shields.io/badge/Oracle_Cloud-A1-F80000?logo=oracle&logoColor=white" alt="Oracle Cloud">
 
+<strong>Language:</strong> 한국어 | <a href="README.en.md">English</a>
+
 [아키텍처](#아키텍처) | [API](#api) | [데이터 모델](#데이터-모델) | [배포](#배포) | [돌리기](#돌리기)
 
 </div>
